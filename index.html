@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corrida Lula x Bolsonaro</title>
+<meta name="description" content="Jogo de corrida por turnos: Lula e Bolsonaro dão um passo por vez rumo à linha de chegada, desviando de obstáculos.">
+<style>
+  :root {
+    --bg: #0f1e14;
+    --panel: #183022;
+    --grass: #2f7d3a;
+    --grass2: #348a40;
+    --track: #c9733d;
+    --track2: #b9672f;
+    --text: #f4f1e8;
+    --muted: #b9c7b9;
+    --lula: #d7263d;
+    --bolso: #f2c500;
+    --bolso2: #1f9e45;
+    --accent: #ffd447;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(circle at 50% 0%, #20402b, var(--bg) 70%);
+    color: var(--text);
+    font-family: "Trebuchet MS", system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 {
+    text-align: center;
+    margin: 4px 0 2px;
+    font-size: clamp(1.5rem, 5vw, 2.6rem);
+    letter-spacing: 1px;
+    text-shadow: 0 3px 0 #000a;
+  }
+  h1 .l { color: var(--lula); }
+  h1 .b { color: var(--bolso); }
+  .sub { text-align: center; color: var(--muted); margin: 0 0 14px; }
+
+  .panel {
+    background: var(--panel);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 6px 20px #0006;
+    margin-bottom: 14px;
+  }
+
+  /* ---------- menu ---------- */
+  .menu { text-align: center; }
+  .menu h2 { margin: 6px 0 12px; }
+  .choices { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .choice {
+    background: #0d1a11;
+    border: 3px solid transparent;
+    border-radius: 14px;
+    padding: 10px 14px;
+    color: var(--text);
+    cursor: pointer;
+    font: inherit;
+    width: 160px;
+    transition: transform .15s, border-color .15s;
+  }
+  .choice:hover { transform: translateY(-3px); }
+  .choice.sel { border-color: var(--accent); }
+  .choice svg { width: 80px; height: 96px; display: block; margin: 0 auto 4px; }
+  .choice small { color: var(--muted); display: block; }
+  .modes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 14px 0; }
+
+  button.btn {
+    font: inherit;
+    font-weight: bold;
+    font-size: 1.05rem;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    cursor: pointer;
+    color: #1a1a1a;
+    background: var(--accent);
+    box-shadow: 0 4px 0 #a8861a;
+    transition: transform .08s, box-shadow .08s, opacity .15s;
+  }
+  button.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #a8861a; }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; }
+  button.btn.alt { background: #e9e4d6; box-shadow: 0 4px 0 #9d988a; }
+  button.btn.toggle { background: #3a5a45; color: var(--text); box-shadow: 0 4px 0 #1e3326; }
+  button.btn.toggle.on { background: var(--accent); color: #1a1a1a; box-shadow: 0 4px 0 #a8861a; }
+
+  /* ---------- pista ---------- */
+  .race { display: none; }
+  .scoreboard {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .score { font-weight: bold; font-size: 1.1rem; }
+  .score .l { color: var(--lula); }
+  .score .b { color: var(--bolso); }
+
+  .field {
+    background: repeating-linear-gradient(90deg, var(--grass) 0 40px, var(--grass2) 40px 80px);
+    border-radius: 14px;
+    padding: 10px 8px;
+    overflow: hidden;
+  }
+  .lane {
+    display: flex; align-items: center; gap: 6px;
+    margin: 8px 0;
+  }
+  .lane-name {
+    width: 74px; flex: none;
+    font-weight: bold; font-size: .9rem; text-align: center;
+    text-shadow: 0 2px 0 #0008;
+  }
+  .lane.turn .lane-name::after {
+    content: "▶ vez"; display: block; color: var(--accent); font-size: .75rem;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 50% { opacity: .3; } }
+  .track {
+    position: relative;
+    flex: 1;
+    height: clamp(64px, 11vw, 96px);
+    display: grid;
+    grid-template-columns: repeat(var(--cols), 1fr);
+    background: var(--track);
+    border-radius: 10px;
+    border: 3px solid #fff5;
+  }
+  .cell {
+    border-right: 2px dashed #fff4;
+    display: flex; align-items: flex-end; justify-content: center;
+    font-size: clamp(.8rem, 2.6vw, 1.6rem);
+    padding-bottom: 4px;
+    position: relative;
+  }
+  .cell:nth-child(even) { background: var(--track2); }
+  .cell.start { background: #0003; }
+  .cell.finish {
+    background:
+      conic-gradient(#fff 25%, #111 0 50%, #fff 0 75%, #111 0) 0 0 / 12px 12px;
+    border-right: none;
+    border-radius: 0 7px 7px 0;
+  }
+  .cell .num {
+    position: absolute; top: 2px; left: 0; right: 0; text-align: center;
+    font-size: .55rem; color: #fff8;
+  }
+  .cell.flash { animation: flash .6s 2; }
+  @keyframes flash { 50% { background: #fff8; } }
+
+  .runner {
+    position: absolute;
+    bottom: 2px;
+    width: calc(100% / var(--cols));
+    height: 100%;
+    left: calc(100% / var(--cols) * var(--pos));
+    transition: left .45s cubic-bezier(.3,1.4,.6,1);
+    display: flex; justify-content: center; align-items: flex-end;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .runner svg { height: 100%; width: auto; max-width: 170%; overflow: visible; filter: drop-shadow(0 3px 2px #0007); }
+  .runner.hop svg { animation: hop .45s ease-out; }
+  @keyframes hop { 40% { transform: translateY(-30%); } }
+  .runner.jump svg { animation: jump .6s ease-out; }
+  @keyframes jump { 45% { transform: translateY(-65%) rotate(-12deg); } }
+  .runner.fall svg { animation: fall .7s ease-out; }
+  @keyframes fall { 30% { transform: rotate(25deg) translateY(10%); } 60% { transform: rotate(-15deg); } }
+  .runner.stuck svg { animation: shake .5s 2; }
+  @keyframes shake { 25% { transform: translateX(-12%); } 75% { transform: translateX(12%); } }
+  .runner .leg { transform-box: fill-box; transform-origin: top center; }
+  .runner.hop .leg1, .runner.jump .leg1 { animation: legA .45s; }
+  .runner.hop .leg2, .runner.jump .leg2 { animation: legB .45s; }
+  @keyframes legA { 50% { transform: rotate(35deg); } }
+  @keyframes legB { 50% { transform: rotate(-35deg); } }
+
+  .controls {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .msg {
+    text-align: center; min-height: 2.6em; margin-top: 10px;
+    font-size: 1.05rem;
+  }
+  .msg b.l { color: var(--lula); }
+  .msg b.b { color: var(--bolso); }
+  .log {
+    max-height: 120px; overflow-y: auto;
+    font-size: .85rem; color: var(--muted);
+    margin: 8px 0 0; padding-left: 0; list-style: none;
+  }
+
+  .legend { display: flex; gap: 8px 16px; flex-wrap: wrap; justify-content: center; font-size: .9rem; color: var(--muted); }
+  .legend span b { color: var(--text); }
+
+  /* ---------- vitória ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: #000b;
+    display: none; align-items: center; justify-content: center;
+    z-index: 10; padding: 16px;
+  }
+  .overlay.show { display: flex; }
+  .win {
+    background: var(--panel); border-radius: 18px; padding: 22px;
+    text-align: center; max-width: 380px; width: 100%;
+    border: 3px solid var(--accent);
+    animation: pop .4s cubic-bezier(.3,1.6,.6,1);
+  }
+  @keyframes pop { from { transform: scale(.5); opacity: 0; } }
+  .win svg { width: 120px; height: 144px; }
+  .win h2 { margin: 6px 0; font-size: 1.8rem; }
+  .confetti {
+    position: fixed; top: -12px; width: 10px; height: 14px; z-index: 11;
+    pointer-events: none; animation: drop linear forwards;
+  }
+  @keyframes drop { to { transform: translateY(110vh) rotate(720deg); } }
+
+  @media (max-width: 560px) {
+    .lane-name { width: 46px; font-size: .7rem; }
+    .cell .num { display: none; }
+    button.btn { padding: 11px 14px; font-size: .95rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="l">LULA</span> × <span class="b">BOLSONARO</span></h1>
+  <p class="sub">A grande corrida — um passo por vez até a linha de chegada!</p>
+
+  <!-- MENU -->
+  <section class="panel menu" id="menu">
+    <h2>Modo de jogo</h2>
+    <div class="modes">
+      <button class="btn toggle on" data-mode="cpu">🤖 Contra o computador</button>
+      <button class="btn toggle" data-mode="2p">👥 2 jogadores</button>
+    </div>
+    <div id="pickBox">
+      <h2>Escolha seu corredor</h2>
+      <div class="choices">
+        <button class="choice sel" data-char="lula"><span class="art" data-art="lula"></span>Lula<small>Barba de respeito</small></button>
+        <button class="choice" data-char="bolso"><span class="art" data-art="bolso"></span>Bolsonaro<small>Faixa verde-amarela</small></button>
+      </div>
+    </div>
+    <p id="twoPHelp" style="display:none;color:var(--muted)">Os dois jogam no mesmo aparelho, revezando a vez.<br>Lula usa a tecla <b>A</b> (pular: <b>S</b>) · Bolsonaro usa a tecla <b>L</b> (pular: <b>K</b>)</p>
+    <div class="modes">
+      <button class="btn" id="startBtn">🏁 Começar corrida</button>
+    </div>
+    <div class="legend">
+      <span>🍌 <b>Banana</b>: escorrega, volta 2</span>
+      <span>🪨 <b>Pedra</b>: tropeça, volta 1</span>
+      <span>🕳️ <b>Buraco</b>: perde a próxima vez</span>
+      <span>⚡ <b>Turbo</b>: avança +2</span>
+    </div>
+  </section>
+
+  <!-- CORRIDA -->
+  <section class="panel race" id="race">
+    <div class="scoreboard">
+      <div class="score">Vitórias — <span class="l">Lula <span id="wL">0</span></span> · <span class="b">Bolsonaro <span id="wB">0</span></span></div>
+      <div>
+        <button class="btn alt" id="soundBtn" title="Som">🔊</button>
+        <button class="btn alt" id="menuBtn">☰ Menu</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lane" id="lane-lula">
+        <div class="lane-name" style="color:var(--lula)">LULA</div>
+        <div class="track"></div>
+      </div>
+      <div class="lane" id="lane-bolso">
+        <div class="lane-name" style="color:var(--bolso)">BOLSO&shy;NARO</div>
+        <div class="track"></div>
+      </div>
+    </div>
+
+    <div class="msg" id="msg"></div>
+    <div class="controls">
+      <button class="btn" id="stepBtn">👣 Dar um passo</button>
+      <button class="btn alt" id="jumpBtn">🦘 Pular (2 casas, arriscado)</button>
+    </div>
+    <ol class="log" id="log" reversed></ol>
+  </section>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="win">
+    <div id="winArt"></div>
+    <h2 id="winTitle"></h2>
+    <p id="winText"></p>
+    <div class="modes">
+      <button class="btn" id="againBtn">🔁 Correr de novo</button>
+      <button class="btn alt" id="backBtn">☰ Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- desenhos (caricaturas simples em SVG) ----------
+  const ART = {
+    lula: `
+<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+  <g class="leg leg1"><rect x="38" y="88" width="10" height="26" rx="4" fill="#2b2b3a"/><ellipse cx="42" cy="116" rx="9" ry="4" fill="#111"/></g>
+  <g class="leg leg2"><rect x="53" y="88" width="10" height="26" rx="4" fill="#2b2b3a"/><ellipse cx="59" cy="116" rx="9" ry="4" fill="#111"/></g>
+  <path d="M28 62 Q50 54 72 62 L76 92 Q50 98 24 92 Z" fill="#d7263d"/>
+  <path d="M50 64 l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7-5.5-4.5 7-.5z" fill="#fff" opacity=".9"/>
+  <rect x="18" y="64" width="10" height="24" rx="5" fill="#d7263d" transform="rotate(18 23 64)"/>
+  <rect x="72" y="64" width="10" height="24" rx="5" fill="#d7263d" transform="rotate(-18 77 64)"/>
+  <circle cx="17" cy="86" r="5" fill="#e8b48f"/><circle cx="83" cy="86" r="5" fill="#e8b48f"/>
+  <ellipse cx="50" cy="34" rx="23" ry="25" fill="#e8b48f"/>
+  <path d="M27 30 Q28 10 50 9 Q72 10 73 30 Q66 18 50 18 Q34 18 27 30Z" fill="#cfcfcf"/>
+  <path d="M27 36 Q28 62 50 64 Q72 62 73 36 Q70 50 62 50 Q50 46 38 50 Q30 50 27 36Z" fill="#d9d9d9"/>
+  <path d="M38 48 Q50 43 62 48 Q50 52 38 48Z" fill="#c2c2c2"/>
+  <ellipse cx="41" cy="33" rx="3.2" ry="3.6" fill="#222"/><ellipse cx="59" cy="33" rx="3.2" ry="3.6" fill="#222"/>
+  <circle cx="42" cy="32" r="1" fill="#fff"/><circle cx="60" cy="32" r="1" fill="#fff"/>
+  <path d="M35 26 q6-4 11 0 M54 26 q6-4 11 0" stroke="#999" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <ellipse cx="50" cy="41" rx="4.5" ry="3.5" fill="#d79b74"/>
+  <path d="M43 53 Q50 58 57 53" stroke="#7a3b2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>`,
+    bolso: `
+<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+  <g class="leg leg1"><rect x="38" y="88" width="10" height="26" rx="4" fill="#24324d"/><ellipse cx="42" cy="116" rx="9" ry="4" fill="#111"/></g>
+  <g class="leg leg2"><rect x="53" y="88" width="10" height="26" rx="4" fill="#24324d"/><ellipse cx="59" cy="116" rx="9" ry="4" fill="#111"/></g>
+  <path d="M28 62 Q50 54 72 62 L76 92 Q50 98 24 92 Z" fill="#f2c500"/>
+  <path d="M30 60 L44 60 L72 94 L58 96 Z" fill="#1f9e45"/>
+  <circle cx="53" cy="77" r="5" fill="#1d4fa0"/>
+  <rect x="18" y="64" width="10" height="24" rx="5" fill="#f2c500" transform="rotate(18 23 64)"/>
+  <rect x="72" y="64" width="10" height="24" rx="5" fill="#f2c500" transform="rotate(-18 77 64)"/>
+  <circle cx="17" cy="86" r="5" fill="#f0c4a2"/><circle cx="83" cy="86" r="5" fill="#f0c4a2"/>
+  <ellipse cx="50" cy="35" rx="22" ry="25" fill="#f0c4a2"/>
+  <path d="M27 32 Q24 8 50 8 Q76 8 73 30 Q70 20 60 18 Q48 22 34 20 Q28 24 27 32Z" fill="#5a4a3e"/>
+  <path d="M34 20 Q44 13 60 17" stroke="#8a7a6c" stroke-width="2" fill="none"/>
+  <rect x="34" y="29" width="13" height="9" rx="3" fill="none" stroke="#333" stroke-width="2"/>
+  <rect x="53" y="29" width="13" height="9" rx="3" fill="none" stroke="#333" stroke-width="2"/>
+  <path d="M47 33 h6" stroke="#333" stroke-width="2"/>
+  <ellipse cx="40.5" cy="33.5" rx="2.6" ry="3" fill="#222"/><ellipse cx="59.5" cy="33.5" rx="2.6" ry="3" fill="#222"/>
+  <path d="M35 25 q5-3 11 0 M54 25 q6-3 11 0" stroke="#5a4a3e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M50 37 q-4 7 0 8" stroke="#c99a7a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M41 51 Q50 55 59 50" stroke="#7a3b2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>`
+  };
+  document.querySelectorAll('[data-art]').forEach(el => el.innerHTML = ART[el.dataset.art]);
+
+  // ---------- configurações ----------
+  const LEN = 20;           // casa da linha de chegada (0 = largada)
+  const JUMP_OK = 0.65;     // chance de o pulo dar certo
+  const OBST = {
+    banana: { icon: '🍌', name: 'casca de banana', run: (p) => back(p, 2, 'escorregou na casca de banana e voltou 2 casas! 🍌') },
+    pedra:  { icon: '🪨', name: 'pedra',           run: (p) => back(p, 1, 'tropeçou na pedra e voltou 1 casa! 🪨') },
+    buraco: { icon: '🕳️', name: 'buraco',          run: (p) => { p.skip = 1; say(p, 'caiu no buraco e vai perder a próxima vez! 🕳️', 'fall'); } },
+    turbo:  { icon: '⚡', name: 'turbo',           run: (p) => { moveTo(p, Math.min(LEN, p.pos + 2)); say(p, 'pegou o TURBO e avançou +2! ⚡', 'jump'); } },
+  };
+
+  const NAMES = { lula: 'Lula', bolso: 'Bolsonaro' };
+  const CLS = { lula: 'l', bolso: 'b' };
+  const KEYS = { lula: { step: 'a', jump: 's' }, bolso: { step: 'l', jump: 'k' } };
+
+  // ---------- estado ----------
+  let mode = 'cpu', human = 'lula', sound = true;
+  let players, turn, board, busy, over;
+  let wins = { lula: 0, bolso: 0 };
+  try { wins = JSON.parse(localStorage.getItem('corrida-wins')) || wins; } catch (e) {}
+
+  const $ = (s) => document.querySelector(s);
+  const msg = $('#msg'), log = $('#log');
+
+  // ---------- som ----------
+  let actx;
+  function beep(freq, dur = .1, type = 'square', vol = .06) {
+    if (!sound) return;
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + dur);
+      o.connect(g).connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+  const sfx = {
+    step: () => beep(520, .07),
+    jump: () => { beep(400, .08); setTimeout(() => beep(800, .1), 80); },
+    bad:  () => { beep(300, .15, 'sawtooth'); setTimeout(() => beep(180, .2, 'sawtooth'), 120); },
+    good: () => { beep(660, .08); setTimeout(() => beep(990, .12), 90); },
+    win:  () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .18, 'triangle', .08), i * 140)),
+  };
+
+  // ---------- menu ----------
+  document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+    $('#pickBox').style.display = mode === 'cpu' ? '' : 'none';
+    $('#twoPHelp').style.display = mode === '2p' ? '' : 'none';
+  });
+  document.querySelectorAll('[data-char]').forEach(b => b.onclick = () => {
+    human = b.dataset.char;
+    document.querySelectorAll('[data-char]').forEach(x => x.classList.toggle('sel', x === b));
+  });
+  $('#startBtn').onclick = start;
+  $('#menuBtn').onclick = toMenu;
+  $('#backBtn').onclick = toMenu;
+  $('#againBtn').onclick = () => { $('#overlay').classList.remove('show'); start(); };
+  $('#soundBtn').onclick = () => { sound = !sound; $('#soundBtn').textContent = sound ? '🔊' : '🔇'; };
+  $('#stepBtn').onclick = () => humanAct('step');
+  $('#jumpBtn').onclick = () => humanAct('jump');
+
+  document.addEventListener('keydown', (e) => {
+    if ($('#race').style.display !== 'block' || over) return;
+    const k = e.key.toLowerCase();
+    if (mode === '2p') {
+      for (const id of ['lula', 'bolso']) {
+        if (k === KEYS[id].step && turn === id) act('step');
+        if (k === KEYS[id].jump && turn === id) act('jump');
+      }
+    } else {
+      if (k === ' ' || k === 'enter') { e.preventDefault(); humanAct('step'); }
+      if (k === 'p' || k === 'arrowup') { e.preventDefault(); humanAct('jump'); }
+    }
+  });
+
+  function toMenu() {
+    over = true;
+    $('#overlay').classList.remove('show');
+    $('#race').style.display = 'none';
+    $('#menu').style.display = '';
+  }
+
+  // ---------- pista ----------
+  function makeBoard() {
+    // mesmo percurso nas duas raias: a corrida é justa, decide a estratégia (e a sorte no pulo)
+    const b = Array(LEN + 1).fill(null);
+    const pool = ['banana', 'banana', 'pedra', 'pedra', 'buraco', 'buraco', 'turbo', 'banana', 'pedra'];
+    let cells = [];
+    for (let i = 2; i < LEN - 1; i++) cells.push(i);
+    cells.sort(() => Math.random() - .5);
+    let placed = 0;
+    for (const c of cells) {
+      if (placed >= pool.length) break;
+      if (b[c - 1] || b[c + 1]) continue; // sem obstáculos colados
+      b[c] = pool[placed++];
+    }
+    return b;
+  }
+
+  function drawLane(id) {
+    const track = document.querySelector(`#lane-${id} .track`);
+    track.style.setProperty('--cols', LEN + 1);
+    let html = '';
+    for (let i = 0; i <= LEN; i++) {
+      const cls = i === 0 ? 'start' : i === LEN ? 'finish' : '';
+      const icon = board[i] ? OBST[board[i]].icon : (i === 0 ? '🚩' : '');
+      html += `<div class="cell ${cls}" data-i="${i}"><span class="num">${i > 0 && i < LEN ? i : ''}</span>${icon}</div>`;
+    }
+    html += `<div class="runner" style="--pos:0">${ART[id]}</div>`;
+    track.innerHTML = html;
+    players[id].el = track.querySelector('.runner');
+    players[id].track = track;
+  }
+
+  function start() {
+    board = makeBoard();
+    players = {
+      lula:  { id: 'lula',  pos: 0, skip: 0 },
+      bolso: { id: 'bolso', pos: 0, skip: 0 },
+    };
+    drawLane('lula'); drawLane('bolso');
+    turn = Math.random() < .5 ? 'lula' : 'bolso';
+    busy = false; over = false;
+    log.innerHTML = '';
+    $('#menu').style.display = 'none';
+    $('#race').style.display = 'block';
+    updateWins();
+    addLog(`Sorteio: <b class="${CLS[turn]}">${NAMES[turn]}</b> começa!`);
+    beginTurn();
+  }
+
+  // ---------- turnos ----------
+  function isCpu(id) { return mode === 'cpu' && id !== human; }
+
+  function beginTurn() {
+    if (over) return;
+    document.querySelectorAll('.lane').forEach(l => l.classList.toggle('turn', l.id === `lane-${turn}`));
+    const p = players[turn];
+    if (p.skip > 0) {
+      p.skip--;
+      setMsg(`<b class="${CLS[turn]}">${NAMES[turn]}</b> ainda está saindo do buraco... perdeu a vez! 😵`);
+      addLog(`${NAMES[turn]} perdeu a vez.`);
+      anim(p, 'stuck');
+      sfx.bad();
+      busy = true;
+      setTimeout(() => { busy = false; nextTurn(); }, 1200);
+      return;
+    }
+    const next = board[p.pos + 1];
+    const warn = next && next !== 'turbo' ? ` Cuidado: tem ${OBST[next].icon} logo à frente!` : '';
+    if (isCpu(turn)) {
+      setMsg(`<b class="${CLS[turn]}">${NAMES[turn]}</b> (computador) está pensando... 🤔`);
+      lockButtons(true);
+      setTimeout(() => act(cpuChoice(p)), 900);
+    } else {
+      const keyHint = mode === '2p' ? ` (tecla ${KEYS[turn].step.toUpperCase()} passo · ${KEYS[turn].jump.toUpperCase()} pular)` : '';
+      setMsg(`Vez de <b class="${CLS[turn]}">${NAMES[turn]}</b>!${keyHint}${warn}`);
+      lockButtons(false);
+    }
+  }
+
+  function cpuChoice(p) {
+    const n1 = board[p.pos + 1], n2 = board[p.pos + 2];
+    if (n1 && n1 !== 'turbo') return 'jump';                 // pula obstáculo à frente
+    if (n2 === 'turbo' && Math.random() < .6) return 'jump'; // tenta pegar o turbo
+    return 'step';
+  }
+
+  function humanAct(kind) {
+    if (busy || over || isCpu(turn)) return;
+    act(kind);
+  }
+
+  function act(kind) {
+    if (busy || over) return;
+    busy = true;
+    lockButtons(true);
+    const p = players[turn];
+    if (kind === 'step') {
+      moveTo(p, p.pos + 1);
+      anim(p, 'hop'); sfx.step();
+      addLog(`${NAMES[p.id]} deu um passo → casa ${p.pos}.`);
+      setTimeout(() => land(p), 500);
+    } else {
+      if (Math.random() < JUMP_OK) {
+        moveTo(p, Math.min(LEN, p.pos + 2));
+        anim(p, 'jump'); sfx.jump();
+        addLog(`${NAMES[p.id]} pulou → casa ${p.pos}.`);
+        setTimeout(() => land(p), 650);
+      } else {
+        anim(p, 'fall'); sfx.bad();
+        say(p, 'tentou pular, caiu de cara no chão e ficou no lugar! 🤕');
+        setTimeout(endTurn, 1100);
+      }
+    }
+  }
+
+  function land(p) {
+    if (p.pos >= LEN) return finish(p);
+    const o = board[p.pos];
+    if (o) {
+      flashCell(p, p.pos);
+      OBST[o].run(p);
+      if (o === 'turbo') { sfx.good(); if (p.pos >= LEN) return setTimeout(() => finish(p), 500); }
+      else sfx.bad();
+      setTimeout(endTurn, 1100);
+    } else {
+      setMsg(`<b class="${CLS[p.id]}">${NAMES[p.id]}</b> está na casa ${p.pos}. Faltam ${LEN - p.pos}!`);
+      setTimeout(endTurn, 350);
+    }
+  }
+
+  function endTurn() { busy = false; nextTurn(); }
+  function nextTurn() {
+    if (over) return;
+    turn = turn === 'lula' ? 'bolso' : 'lula';
+    beginTurn();
+  }
+
+  function finish(p) {
+    over = true; busy = false;
+    lockButtons(true);
+    wins[p.id]++;
+    try { localStorage.setItem('corrida-wins', JSON.stringify(wins)); } catch (e) {}
+    updateWins();
+    setMsg(`🏆 <b class="${CLS[p.id]}">${NAMES[p.id]}</b> cruzou a linha de chegada!`);
+    addLog(`🏆 ${NAMES[p.id]} venceu!`);
+    sfx.win();
+    confetti(p.id);
+    $('#winArt').innerHTML = ART[p.id];
+    $('#winTitle').innerHTML = `<span style="color:var(--${p.id === 'lula' ? 'lula' : 'bolso'})">${NAMES[p.id]}</span> venceu!`;
+    let txt = 'Cruzou a linha de chegada primeiro!';
+    if (mode === 'cpu') txt = p.id === human ? 'Você venceu o computador! 🎉' : 'O computador venceu desta vez... tente de novo!';
+    $('#winText').textContent = txt;
+    setTimeout(() => $('#overlay').classList.add('show'), 700);
+  }
+
+  // ---------- ajudantes ----------
+  function moveTo(p, pos) {
+    p.pos = Math.max(0, Math.min(LEN, pos));
+    p.el.style.setProperty('--pos', p.pos);
+  }
+  function back(p, n, text) { moveTo(p, p.pos - n); say(p, text, 'fall'); }
+  function say(p, text, a) {
+    setMsg(`<b class="${CLS[p.id]}">${NAMES[p.id]}</b> ${text}`);
+    addLog(`${NAMES[p.id]} ${text}`);
+    if (a) anim(p, a);
+  }
+  function anim(p, cls) {
+    p.el.classList.remove('hop', 'jump', 'fall', 'stuck');
+    void p.el.offsetWidth;
+    p.el.classList.add(cls);
+  }
+  function flashCell(p, i) {
+    const c = p.track.querySelector(`[data-i="${i}"]`);
+    c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash');
+  }
+  function setMsg(h) { msg.innerHTML = h; }
+  function addLog(h) {
+    const li = document.createElement('li');
+    li.innerHTML = h;
+    log.prepend(li);
+  }
+  function lockButtons(v) { $('#stepBtn').disabled = v; $('#jumpBtn').disabled = v; }
+  function updateWins() { $('#wL').textContent = wins.lula; $('#wB').textContent = wins.bolso; }
+  function confetti(id) {
+    const colors = id === 'lula' ? ['#d7263d', '#fff', '#ffd447'] : ['#f2c500', '#1f9e45', '#1d4fa0'];
+    for (let i = 0; i < 80; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[i % colors.length];
+      c.style.animationDuration = 1.8 + Math.random() * 1.8 + 's';
+      c.style.animationDelay = Math.random() * .6 + 's';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 4500);
+    }
+  }
+})();
+</script>
+</body>
+</html>
