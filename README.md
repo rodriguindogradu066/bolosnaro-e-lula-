@@ -4,6 +4,7 @@ Jogo de corrida por turnos feito em HTML/CSS/JavaScript puro (um único arquivo,
 Lula e Bolsonaro dão **um passo por vez** até a linha de chegada, e no meio do caminho tem obstáculos.
 
 ## Como jogar
+- **Você escolhe quem anda** (modo padrão): não tem vez alternada. Em cada jogada você escolhe se é o **Lula** ou o **Bolsonaro** que dá o passo ou pula. Teclas: Lula `A` (passo) / `S` (pular) · Bolsonaro `L` (passo) / `K` (pular).
 - **Contra o computador**: escolha seu corredor e jogue com os botões (ou Espaço = passo, P = pular).
 - **2 jogadores**: no mesmo aparelho, revezando a vez. Lula: tecla `A` (passo) / `S` (pular) · Bolsonaro: tecla `L` (passo) / `K` (pular).
 - Em cada vez você escolhe:
@@ -19,6 +20,10 @@ Lula e Bolsonaro dão **um passo por vez** até a linha de chegada, e no meio do
 | ⚡ Turbo | avança +2 casas |
 
 Os obstáculos mudam a cada corrida e são iguais nas duas raias, então a corrida é justa.
+Cada obstáculo só pega uma vez por corredor: depois de cair nele, ele some da raia daquele corredor.
+
+## Placar
+Quem cruza a linha de chegada primeiro ganha **+1 ponto**. A pista reseta sozinha depois de 3 segundos e o placar continua somando (fica salvo no navegador). O botão **🧹 Zerar** volta o placar para 0 × 0.
 
 ## Colocar o site no ar (GitHub Pages)
 1. No GitHub, abra o repositório → **Settings** → **Pages**.

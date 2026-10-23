@@ -95,9 +95,22 @@
     display: flex; justify-content: space-between; align-items: center;
     gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
   }
-  .score { font-weight: bold; font-size: 1.1rem; }
+  .score {
+    display: flex; align-items: center; gap: 10px;
+    background: #0d1a11; border-radius: 14px; padding: 6px 14px;
+    font-weight: bold;
+  }
+  .score .side { text-align: center; line-height: 1.1; }
+  .score .side small { display: block; font-size: .8rem; }
+  .score .pts { font-size: 2rem; display: inline-block; }
+  .score .pts.bump { animation: bump .6s; }
+  @keyframes bump { 40% { transform: scale(1.8); color: #fff; } }
   .score .l { color: var(--lula); }
   .score .b { color: var(--bolso); }
+  .score .x { color: var(--muted); font-size: 1.4rem; }
+  .round { color: var(--muted); font-size: .9rem; text-align: center; }
+  .plus { font-size: 1.4rem; color: var(--accent); font-weight: bold; margin: 4px 0; }
+  .count { font-size: 1.1rem; color: var(--muted); }
 
   .field {
     background: repeating-linear-gradient(90deg, var(--grass) 0 40px, var(--grass2) 40px 80px);
@@ -181,6 +194,14 @@
     display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
     margin-top: 12px;
   }
+  .who {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+    background: #0d1a11; border-radius: 14px; padding: 8px 10px;
+    border: 2px solid currentColor;
+  }
+  .who.l { color: var(--lula); }
+  .who.b { color: var(--bolso); }
+  .who > span { font-weight: bold; min-width: 90px; text-align: center; }
   .msg {
     text-align: center; min-height: 2.6em; margin-top: 10px;
     font-size: 1.05rem;
@@ -234,10 +255,12 @@
   <section class="panel menu" id="menu">
     <h2>Modo de jogo</h2>
     <div class="modes">
-      <button class="btn toggle on" data-mode="cpu">🤖 Contra o computador</button>
+      <button class="btn toggle on" data-mode="free">🎯 Você escolhe quem anda</button>
+      <button class="btn toggle" data-mode="cpu">🤖 Contra o computador</button>
       <button class="btn toggle" data-mode="2p">👥 2 jogadores</button>
     </div>
-    <div id="pickBox">
+    <p id="freeHelp" style="color:var(--muted)">Sem vez alternada: a cada jogada você escolhe se quem anda (ou pula) é o <b>Lula</b> ou o <b>Bolsonaro</b>.<br>Teclas: Lula <b>A</b> passo / <b>S</b> pula · Bolsonaro <b>L</b> passo / <b>K</b> pula</p>
+    <div id="pickBox" style="display:none">
       <h2>Escolha seu corredor</h2>
       <div class="choices">
         <button class="choice sel" data-char="lula"><span class="art" data-art="lula"></span>Lula<small>Barba de respeito</small></button>
@@ -259,9 +282,17 @@
   <!-- CORRIDA -->
   <section class="panel race" id="race">
     <div class="scoreboard">
-      <div class="score">Vitórias — <span class="l">Lula <span id="wL">0</span></span> · <span class="b">Bolsonaro <span id="wB">0</span></span></div>
+      <div>
+        <div class="score">
+          <div class="side l"><span class="pts" id="wL">0</span><small>LULA</small></div>
+          <span class="x">×</span>
+          <div class="side b"><span class="pts" id="wB">0</span><small>BOLSONARO</small></div>
+        </div>
+        <div class="round" id="round"></div>
+      </div>
       <div>
         <button class="btn alt" id="soundBtn" title="Som">🔊</button>
+        <button class="btn alt" id="resetBtn" title="Zerar placar">🧹 Zerar</button>
         <button class="btn alt" id="menuBtn">☰ Menu</button>
       </div>
     </div>
@@ -278,7 +309,19 @@
     </div>
 
     <div class="msg" id="msg"></div>
-    <div class="controls">
+    <div class="controls" id="freeControls">
+      <div class="who l">
+        <span>LULA</span>
+        <button class="btn" data-who="lula" data-kind="step">👣 Passo</button>
+        <button class="btn alt" data-who="lula" data-kind="jump">🦘 Pula 2</button>
+      </div>
+      <div class="who b">
+        <span>BOLSONARO</span>
+        <button class="btn" data-who="bolso" data-kind="step">👣 Passo</button>
+        <button class="btn alt" data-who="bolso" data-kind="jump">🦘 Pula 2</button>
+      </div>
+    </div>
+    <div class="controls" id="turnControls">
       <button class="btn" id="stepBtn">👣 Dar um passo</button>
       <button class="btn alt" id="jumpBtn">🦘 Pular (2 casas, arriscado)</button>
     </div>
@@ -290,9 +333,11 @@
   <div class="win">
     <div id="winArt"></div>
     <h2 id="winTitle"></h2>
+    <div class="plus">+1 ponto! 🏆</div>
     <p id="winText"></p>
+    <p class="count" id="countText"></p>
     <div class="modes">
-      <button class="btn" id="againBtn">🔁 Correr de novo</button>
+      <button class="btn" id="againBtn">▶ Correr agora</button>
       <button class="btn alt" id="backBtn">☰ Menu</button>
     </div>
   </div>
@@ -360,10 +405,11 @@
   const KEYS = { lula: { step: 'a', jump: 's' }, bolso: { step: 'l', jump: 'k' } };
 
   // ---------- estado ----------
-  let mode = 'cpu', human = 'lula', sound = true;
+  let mode = 'free', human = 'lula', sound = true;
   let players, turn, board, busy, over;
   let wins = { lula: 0, bolso: 0 };
   try { wins = JSON.parse(localStorage.getItem('corrida-wins')) || wins; } catch (e) {}
+  let round = wins.lula + wins.bolso + 1;
 
   const $ = (s) => document.querySelector(s);
   const msg = $('#msg'), log = $('#log');
@@ -396,6 +442,7 @@
     document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
     $('#pickBox').style.display = mode === 'cpu' ? '' : 'none';
     $('#twoPHelp').style.display = mode === '2p' ? '' : 'none';
+    $('#freeHelp').style.display = mode === 'free' ? '' : 'none';
   });
   document.querySelectorAll('[data-char]').forEach(b => b.onclick = () => {
     human = b.dataset.char;
@@ -404,15 +451,26 @@
   $('#startBtn').onclick = start;
   $('#menuBtn').onclick = toMenu;
   $('#backBtn').onclick = toMenu;
-  $('#againBtn').onclick = () => { $('#overlay').classList.remove('show'); start(); };
+  $('#againBtn').onclick = () => { stopCountdown(); $('#overlay').classList.remove('show'); start(); };
+  $('#resetBtn').onclick = () => {
+    if (!confirm('Zerar o placar de Lula e Bolsonaro?')) return;
+    wins = { lula: 0, bolso: 0 }; round = 1;
+    saveWins(); updateWins();
+  };
   $('#soundBtn').onclick = () => { sound = !sound; $('#soundBtn').textContent = sound ? '🔊' : '🔇'; };
   $('#stepBtn').onclick = () => humanAct('step');
   $('#jumpBtn').onclick = () => humanAct('jump');
+  document.querySelectorAll('[data-who]').forEach(b => b.onclick = () => freeAct(b.dataset.who, b.dataset.kind));
 
   document.addEventListener('keydown', (e) => {
     if ($('#race').style.display !== 'block' || over) return;
     const k = e.key.toLowerCase();
-    if (mode === '2p') {
+    if (mode === 'free') {
+      for (const id of ['lula', 'bolso']) {
+        if (k === KEYS[id].step) freeAct(id, 'step');
+        if (k === KEYS[id].jump) freeAct(id, 'jump');
+      }
+    } else if (mode === '2p') {
       for (const id of ['lula', 'bolso']) {
         if (k === KEYS[id].step && turn === id) act('step');
         if (k === KEYS[id].jump && turn === id) act('jump');
@@ -425,6 +483,7 @@
 
   function toMenu() {
     over = true;
+    stopCountdown();
     $('#overlay').classList.remove('show');
     $('#race').style.display = 'none';
     $('#menu').style.display = '';
@@ -465,18 +524,52 @@
   function start() {
     board = makeBoard();
     players = {
-      lula:  { id: 'lula',  pos: 0, skip: 0 },
-      bolso: { id: 'bolso', pos: 0, skip: 0 },
+      lula:  { id: 'lula',  pos: 0, skip: 0, used: new Set() },
+      bolso: { id: 'bolso', pos: 0, skip: 0, used: new Set() },
     };
     drawLane('lula'); drawLane('bolso');
-    turn = Math.random() < .5 ? 'lula' : 'bolso';
     busy = false; over = false;
     log.innerHTML = '';
     $('#menu').style.display = 'none';
     $('#race').style.display = 'block';
+    $('#freeControls').style.display = mode === 'free' ? '' : 'none';
+    $('#turnControls').style.display = mode === 'free' ? 'none' : '';
     updateWins();
-    addLog(`Sorteio: <b class="${CLS[turn]}">${NAMES[turn]}</b> começa!`);
+    if (mode === 'free') {
+      addLog(`Corrida nº ${round} — escolha quem anda!`);
+      return beginFree();
+    }
+    turn = Math.random() < .5 ? 'lula' : 'bolso';
+    addLog(`Corrida nº ${round} — sorteio: <b class="${CLS[turn]}">${NAMES[turn]}</b> começa!`);
     beginTurn();
+  }
+
+  // ---------- modo "você escolhe quem anda" ----------
+  function beginFree() {
+    if (over) return;
+    document.querySelectorAll('.lane').forEach(l => l.classList.remove('turn'));
+    const stuck = ['lula', 'bolso'].filter(id => players[id].skip > 0).map(id => NAMES[id]);
+    const warn = stuck.length ? ` (${stuck.join(' e ')} está no buraco: a próxima jogada dele é perdida)` : '';
+    setMsg(`Escolha quem anda: <b class="l">Lula</b> ou <b class="b">Bolsonaro</b>?${warn}`);
+    lockButtons(false);
+  }
+
+  function freeAct(id, kind) {
+    if (mode !== 'free' || busy || over) return;
+    turn = id;
+    const p = players[id];
+    if (p.skip > 0) {
+      p.skip--;
+      busy = true;
+      lockButtons(true);
+      setMsg(`<b class="${CLS[id]}">${NAMES[id]}</b> ainda está saindo do buraco... jogada perdida! 😵`);
+      addLog(`${NAMES[id]} perdeu a jogada.`);
+      anim(p, 'stuck');
+      sfx.bad();
+      setTimeout(endTurn, 1200);
+      return;
+    }
+    act(kind);
   }
 
   // ---------- turnos ----------
@@ -496,7 +589,7 @@
       setTimeout(() => { busy = false; nextTurn(); }, 1200);
       return;
     }
-    const next = board[p.pos + 1];
+    const next = p.used.has(p.pos + 1) ? null : board[p.pos + 1];
     const warn = next && next !== 'turbo' ? ` Cuidado: tem ${OBST[next].icon} logo à frente!` : '';
     if (isCpu(turn)) {
       setMsg(`<b class="${CLS[turn]}">${NAMES[turn]}</b> (computador) está pensando... 🤔`);
@@ -510,7 +603,8 @@
   }
 
   function cpuChoice(p) {
-    const n1 = board[p.pos + 1], n2 = board[p.pos + 2];
+    const at = (i) => p.used.has(i) ? null : board[i];
+    const n1 = at(p.pos + 1), n2 = at(p.pos + 2);
     if (n1 && n1 !== 'turbo') return 'jump';                 // pula obstáculo à frente
     if (n2 === 'turbo' && Math.random() < .6) return 'jump'; // tenta pegar o turbo
     return 'step';
@@ -547,9 +641,13 @@
 
   function land(p) {
     if (p.pos >= LEN) return finish(p);
-    const o = board[p.pos];
+    const o = p.used.has(p.pos) ? null : board[p.pos];
     if (o) {
+      // cada obstáculo só pega uma vez por corredor (some da raia dele), senão dava pra ficar preso na banana
+      p.used.add(p.pos);
+      const cell = p.track.querySelector(`[data-i="${p.pos}"]`);
       flashCell(p, p.pos);
+      setTimeout(() => { cell.lastChild.nodeType === 3 && cell.lastChild.remove(); }, 1200);
       OBST[o].run(p);
       if (o === 'turbo') { sfx.good(); if (p.pos >= LEN) return setTimeout(() => finish(p), 500); }
       else sfx.bad();
@@ -563,6 +661,7 @@
   function endTurn() { busy = false; nextTurn(); }
   function nextTurn() {
     if (over) return;
+    if (mode === 'free') return beginFree();
     turn = turn === 'lula' ? 'bolso' : 'lula';
     beginTurn();
   }
@@ -571,8 +670,11 @@
     over = true; busy = false;
     lockButtons(true);
     wins[p.id]++;
-    try { localStorage.setItem('corrida-wins', JSON.stringify(wins)); } catch (e) {}
+    round++;
+    saveWins();
     updateWins();
+    const pts = $(p.id === 'lula' ? '#wL' : '#wB');
+    pts.classList.remove('bump'); void pts.offsetWidth; pts.classList.add('bump');
     setMsg(`🏆 <b class="${CLS[p.id]}">${NAMES[p.id]}</b> cruzou a linha de chegada!`);
     addLog(`🏆 ${NAMES[p.id]} venceu!`);
     sfx.win();
@@ -581,9 +683,24 @@
     $('#winTitle').innerHTML = `<span style="color:var(--${p.id === 'lula' ? 'lula' : 'bolso'})">${NAMES[p.id]}</span> venceu!`;
     let txt = 'Cruzou a linha de chegada primeiro!';
     if (mode === 'cpu') txt = p.id === human ? 'Você venceu o computador! 🎉' : 'O computador venceu desta vez... tente de novo!';
-    $('#winText').textContent = txt;
-    setTimeout(() => $('#overlay').classList.add('show'), 700);
+    $('#winText').textContent = `${txt} Placar: Lula ${wins.lula} × ${wins.bolso} Bolsonaro`;
+    $('#countText').textContent = '';
+    countdown = setTimeout(() => {
+      $('#overlay').classList.add('show');
+      let n = 3;
+      const tick = () => {
+        if (n === 0) { stopCountdown(); $('#overlay').classList.remove('show'); start(); return; }
+        $('#countText').textContent = `Nova corrida em ${n}...`;
+        n--;
+        countdown = setTimeout(tick, 1000);
+      };
+      tick();
+    }, 700);
   }
+
+  // após cada vitória a pista reseta sozinha e o placar continua somando
+  let countdown = null;
+  function stopCountdown() { clearTimeout(countdown); countdown = null; }
 
   // ---------- ajudantes ----------
   function moveTo(p, pos) {
@@ -611,8 +728,15 @@
     li.innerHTML = h;
     log.prepend(li);
   }
-  function lockButtons(v) { $('#stepBtn').disabled = v; $('#jumpBtn').disabled = v; }
-  function updateWins() { $('#wL').textContent = wins.lula; $('#wB').textContent = wins.bolso; }
+  function lockButtons(v) {
+    $('#stepBtn').disabled = v; $('#jumpBtn').disabled = v;
+    document.querySelectorAll('[data-who]').forEach(b => b.disabled = v);
+  }
+  function updateWins() {
+    $('#wL').textContent = wins.lula; $('#wB').textContent = wins.bolso;
+    $('#round').textContent = `Corrida nº ${round}`;
+  }
+  function saveWins() { try { localStorage.setItem('corrida-wins', JSON.stringify(wins)); } catch (e) {} }
   function confetti(id) {
     const colors = id === 'lula' ? ['#d7263d', '#fff', '#ffd447'] : ['#f2c500', '#1f9e45', '#1d4fa0'];
     for (let i = 0; i < 80; i++) {
