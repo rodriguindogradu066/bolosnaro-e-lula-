@@ -239,6 +239,34 @@
   }
   @keyframes drop { to { transform: translateY(110vh) rotate(720deg); } }
 
+
+  /* ---------- tabela de presentes (canto da tela) ---------- */
+  .gifts {
+    position: fixed; right: 16px; bottom: 16px; z-index: 5;
+    width: 280px;
+  }
+  .gifts img {
+    width: 100%; display: block; border-radius: 14px;
+    box-shadow: 0 8px 24px #000a; border: 3px solid var(--accent);
+    cursor: zoom-in; transition: width .2s;
+  }
+  .gifts.big { width: min(560px, 90vw); }
+  .gifts.big img { cursor: zoom-out; }
+  .gifts.min img { display: none; }
+  .gifts button {
+    position: absolute; top: -10px; right: -10px;
+    width: 30px; height: 30px; border-radius: 50%; border: none;
+    background: var(--accent); color: #1a1a1a; font-weight: bold; cursor: pointer;
+    box-shadow: 0 2px 6px #0008;
+  }
+  .gifts.min { width: auto; }
+  .gifts.min button { position: static; width: auto; height: auto; border-radius: 12px; padding: 10px 14px; }
+  @media (max-width: 1500px) {
+    /* em telas menores a imagem desce para baixo do jogo, sem tampar a pista */
+    .gifts { position: relative; right: auto; bottom: auto; margin: 0 auto 16px; max-width: calc(100% - 10px); }
+    .gifts.min { text-align: center; }
+  }
+
   @media (max-width: 560px) {
     .lane-name { width: 46px; font-size: .7rem; }
     .cell .num { display: none; }
@@ -328,6 +356,11 @@
     <ol class="log" id="log" reversed></ol>
   </section>
 </div>
+
+<aside class="gifts" id="gifts">
+  <button id="giftsToggle" title="Esconder/mostrar">✕</button>
+  <img src="tabela-presentes.webp" alt="Tabela de presentes da live: cachaça pro Lula, flor azul pro Bolsonaro, bandeira = +5 pulos para o Bolsonaro, chinelos = +5 pulos para o Lula" id="giftsImg">
+</aside>
 
 <div class="overlay" id="overlay">
   <div class="win">
@@ -449,6 +482,13 @@
     document.querySelectorAll('[data-char]').forEach(x => x.classList.toggle('sel', x === b));
   });
   $('#startBtn').onclick = start;
+  $('#giftsImg').onclick = () => $('#gifts').classList.toggle('big');
+  $('#giftsToggle').onclick = () => {
+    const g = $('#gifts');
+    g.classList.remove('big');
+    g.classList.toggle('min');
+    $('#giftsToggle').textContent = g.classList.contains('min') ? '🎁 Tabela de presentes' : '✕';
+  };
   $('#menuBtn').onclick = toMenu;
   $('#backBtn').onclick = toMenu;
   $('#againBtn').onclick = () => { stopCountdown(); $('#overlay').classList.remove('show'); start(); };
