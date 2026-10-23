@@ -241,9 +241,10 @@
 
 
   /* ---------- tabela de presentes (canto da tela) ---------- */
+  :root { --gifts-w: clamp(200px, 20vw, 280px); }
   .gifts {
     position: fixed; right: 16px; bottom: 16px; z-index: 5;
-    width: 280px;
+    width: var(--gifts-w);
   }
   .gifts img {
     width: 100%; display: block; border-radius: 14px;
@@ -261,9 +262,13 @@
   }
   .gifts.min { width: auto; }
   .gifts.min button { position: static; width: auto; height: auto; border-radius: 12px; padding: 10px 14px; }
-  @media (max-width: 1500px) {
-    /* em telas menores a imagem desce para baixo do jogo, sem tampar a pista */
-    .gifts { position: relative; right: auto; bottom: auto; margin: 0 auto 16px; max-width: calc(100% - 10px); }
+  @media (min-width: 760px) and (max-width: 1640px) {
+    /* notebook: o jogo chega para a esquerda e a tabela fica no canto direito sem tampar nada */
+    .wrap { margin-left: 0; margin-right: calc(var(--gifts-w) + 16px); }
+  }
+  @media (max-width: 759px) {
+    /* celular: não cabe no canto, a imagem desce para baixo do jogo */
+    .gifts { position: relative; right: auto; bottom: auto; width: 280px; margin: 0 auto 16px; max-width: calc(100% - 10px); }
     .gifts.min { text-align: center; }
   }
 
